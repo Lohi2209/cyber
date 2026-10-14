@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="page-shell report-page">
+        <section class="dashboard-header glass-card">
+            <div>
+                <p class="eyebrow">Project Report</p>
+                <h1>Cyberbullying detection summary</h1>
+                <p class="lead">A compact report view with key counts, dominant patterns, and the latest detection history.</p>
+            </div>
+            <div class="header-actions">
+                <a class="secondary-link" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+                <a class="secondary-link" href="{{ url_for('index') }}">Back to analyzer</a>
+            </div>
+        </section>
+
+        <section class="stats-grid report-stats-grid">
+            <article class="stat-card">
+                <span>Total analyses</span>
+                <strong>{{ total_messages }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Average confidence</span>
+                <strong>{{ '%.1f'|format(average_confidence * 100) }}%</strong>
+            </article>
+            <article class="stat-card">
+                <span>Most frequent severity</span>
+                <strong>{{ highest_severity }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Top category</span>
+                <strong>{{ top_category }}</strong>
+            </article>
+        </section>
+
+        <section class="report-grid">
+            <article class="glass-card report-panel">
+                <h2>Severity breakdown</h2>
+                <ul class="report-list">
+                    {% for label, count in severity_counts.items() %}
+                        <li><span>{{ label }}</span><strong>{{ count }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </article>
+
+            <article class="glass-card report-panel">
+                <h2>Category breakdown</h2>
+                <ul class="report-list">
+                    {% for label, count in category_counts.items() %}
+                        <li><span>{{ label }}</span><strong>{{ count }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </article>
+        </section>
+
+        <section class="glass-card report-summary">
+            <h2>What this report shows</h2>
+            <p>This project now supports live prediction, result storage in SQLite, dashboard filtering, CSV export, chart-based monitoring, and a summary report page. It is suitable for a final-year mini project because it combines NLP preprocessing, machine learning, data persistence, and reporting in one workflow.</p>
+        </section>
+
+        <section class="table-card glass-card">
+            <h2>Latest detections</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Message</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th>Confidence</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_results %}
+                            {% for row in recent_results %}
+                                <tr>
+                                    <td>{{ row.id }}</td>
+                                    <td>{{ row.message }}</td>
+                                    <td>{{ row.predicted_category }}</td>
+                                    <td><span class="table-badge severity-{{ row.severity|lower }}">{{ row.severity }}</span></td>
+                                    <td>{{ '%.2f'|format(row.confidence * 100) }}%</td>
+                                    <td>{{ row.created_at }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="6" class="empty-state">No data available yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

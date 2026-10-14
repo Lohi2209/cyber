@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="page-shell dashboard-shell">
+        <section class="dashboard-header glass-card">
+            <div>
+                <p class="eyebrow">Bulk Analysis</p>
+                <h1>Analyze a collection of messages at once.</h1>
+                <p class="lead">Upload a TXT file with one message per line, or a CSV/ZIP with a message, text, tweet, tweet_text, comment_text, or content column. Batches support up to 200,000 messages.</p>
+            </div>
+            <div class="header-actions">
+                <a class="secondary-link" href="{{ url_for('dashboard') }}">Open dashboard</a>
+                <a class="secondary-link" href="{{ url_for('index') }}">Single message</a>
+            </div>
+        </section>
+
+        <section class="filter-card glass-card">
+            <form action="{{ url_for('bulk_analysis') }}" method="post" enctype="multipart/form-data" class="filter-form">
+                <div class="filter-field">
+                    <label for="file">CSV file</label>
+                    <input id="file" name="file" type="file" accept=".txt,.csv,.zip,text/plain,text/csv,application/zip" required>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="primary-button">Analyze all messages</button>
+                    <a class="ghost-link" href="{{ url_for('index') }}">Cancel</a>
+                </div>
+            </form>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-stack">
+                        {% for category, message in messages %}
+                            <div class="flash {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </section>
+
+        {% if summary %}
+            <section class="stats-grid dashboard-stats-grid">
+                <article class="stat-card"><span>Input rows</span><strong>{{ summary.input_rows }}</strong></article>
+                <article class="stat-card"><span>Total analyzed</span><strong>{{ summary.total }}</strong></article>
+                <article class="stat-card"><span>Skipped rows</span><strong>{{ summary.skipped_rows }}</strong></article>
+                <article class="stat-card"><span>Safe</span><strong>{{ summary.safe }}</strong></article>
+                <article class="stat-card"><span>Low</span><strong>{{ summary.low }}</strong></article>
+                <article class="stat-card"><span>Medium</span><strong>{{ summary.medium }}</strong></article>
+                <article class="stat-card"><span>High</span><strong>{{ summary.high }}</strong></article>
+            </section>
+            <section class="table-card glass-card">
+                <div class="result-header">
+                    <div><p class="section-tag">Batch complete</p><h2>Detailed results</h2></div>
+                    <a class="secondary-link" href="{{ url_for('export_csv') }}">Export history CSV</a>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Message</th><th>Category</th><th>Severity</th><th>Confidence</th><th>Explanation</th><th>Suggestion</th></tr></thead>
+                        <tbody>
+                            {% for row in results %}
+                                <tr>
+                                    <td>{{ row.message }}</td>
+                                    <td>{{ row.predicted_category }}</td>
+                                    <td><span class="table-badge severity-{{ row.severity|lower }}">{{ row.severity }}</span></td>
+                                    <td>{{ '%.2f'|format(row.confidence * 100) }}%</td>
+                                    <td>{{ row.explanation }}</td>
+                                    <td>{{ row.suggestion }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

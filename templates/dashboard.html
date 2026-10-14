@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <main class="page-shell dashboard-shell">
+        <section class="dashboard-header glass-card">
+            <div>
+                <p class="eyebrow">Monitoring Dashboard</p>
+                <h1>Stored detection history and severity overview</h1>
+                <p class="lead">Filter the stored results, review severity trends, and inspect the model’s predictions in one place.</p>
+            </div>
+            <div class="header-actions">
+                <a class="secondary-link" href="{{ url_for('bulk_analysis') }}">Bulk analysis</a>
+                <a class="secondary-link" href="{{ url_for('report') }}">Open report</a>
+                <a class="secondary-link" href="{{ url_for('index') }}">Back to analyzer</a>
+            </div>
+        </section>
+
+        <section class="stats-grid dashboard-stats-grid">
+            <article class="stat-card">
+                <span>Total messages</span>
+                <strong>{{ total_messages }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Safe</span>
+                <strong>{{ severity_counts.get('Safe', 0) }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Low</span>
+                <strong>{{ severity_counts.get('Low', 0) }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Medium</span>
+                <strong>{{ severity_counts.get('Medium', 0) }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>High</span>
+                <strong>{{ severity_counts.get('High', 0) }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Avg. confidence</span>
+                <strong>{{ '%.1f'|format(average_confidence * 100) }}%</strong>
+            </article>
+        </section>
+
+        <section class="filter-card glass-card">
+            <form method="get" class="filter-form">
+                <div class="filter-field">
+                    <label for="search">Search</label>
+                    <input type="text" id="search" name="search" value="{{ current_search }}" placeholder="Message, category, or suggestion">
+                </div>
+                <div class="filter-field">
+                    <label for="review_status">Review status</label>
+                    <select id="review_status" name="review_status">
+                        <option value="All" {% if current_review_status == 'All' %}selected{% endif %}>All</option>
+                        <option value="Pending Review" {% if current_review_status == 'Pending Review' %}selected{% endif %}>Pending Review</option>
+                        <option value="Reviewed" {% if current_review_status == 'Reviewed' %}selected{% endif %}>Reviewed</option>
+                        <option value="Resolved" {% if current_review_status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="severity">Severity</label>
+                    <select id="severity" name="severity">
+                        <option value="All" {% if current_severity == 'All' %}selected{% endif %}>All</option>
+                        <option value="Safe" {% if current_severity == 'Safe' %}selected{% endif %}>Safe</option>
+                        <option value="Low" {% if current_severity == 'Low' %}selected{% endif %}>Low</option>
+                        <option value="Medium" {% if current_severity == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="High" {% if current_severity == 'High' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="primary-button">Apply filters</button>
+                    <a class="ghost-link" href="{{ url_for('export_csv', severity=current_severity, search=current_search) }}">Export CSV</a>
+                    <a class="ghost-link" href="{{ url_for('dashboard') }}">Reset</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="table-card glass-card">
+            <h2>Model performance</h2>
+            {% if performance_metrics %}
+                <div class="stats-grid compact-grid">
+                    <article class="stat-card"><span>Accuracy</span><strong>{{ '%.2f'|format(performance_metrics.accuracy * 100) }}%</strong></article>
+                    <article class="stat-card"><span>Precision</span><strong>{{ '%.2f'|format(performance_metrics.precision * 100) }}%</strong></article>
+                    <article class="stat-card"><span>Recall</span><strong>{{ '%.2f'|format(performance_metrics.recall * 100) }}%</strong></article>
+                    <article class="stat-card"><span>F1-score</span><strong>{{ '%.2f'|format(performance_metrics.f1 * 100) }}%</strong></article>
+                </div>
+                <h3>Confusion matrix</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Actual \ Predicted</th>{% for label in performance_metrics.labels %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+                        <tbody>{% for row in performance_metrics.confusion_matrix %}<tr><th>{{ performance_metrics.labels[loop.index0] }}</th>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="empty-state">Run the training workflow to generate verified model metrics.</p>
+            {% endif %}
+        </section>
+
+        <section class="chart-grid">
+            <article class="chart-card glass-card">
+                <h2>Severity distribution</h2>
+                <canvas id="severityChart"></canvas>
+            </article>
+            <article class="chart-card glass-card">
+                <h2>Category distribution</h2>
+                <canvas id="categoryChart"></canvas>
+            </article>
+        </section>
+
+        <section class="table-card glass-card">
+            <h2>Recent results</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Message</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th>Confidence</th>
+                            <th>Suggestion</th>
+                            <th>Review</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if results %}
+                            {% for row in results %}
+                                <tr>
+                                    <td>{{ row.id }}</td>
+                                    <td>{{ row.message }}</td>
+                                    <td>{{ row.predicted_category }}</td>
+                                    <td><span class="table-badge severity-{{ row.severity|lower }}">{{ row.severity }}</span></td>
+                                    <td>{{ '%.2f'|format(row.confidence * 100) }}%</td>
+                                    <td>{{ row.suggestion }}</td>
+                                    <td>
+                                        <form action="{{ url_for('review_result', result_id=row.id) }}" method="post">
+                                            <select name="review_status" onchange="this.form.submit()">
+                                                {% for status in ['Pending Review', 'Reviewed', 'Resolved'] %}
+                                                    <option value="{{ status }}" {% if row.review_status == status %}selected{% endif %}>{{ status }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </form>
+                                    </td>
+                                    <td>{{ row.created_at }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="empty-state">No records match the current filters.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const severityLabels = {{ severity_chart_labels|tojson }};
+        const severityValues = {{ severity_chart_values|tojson }};
+        const categoryLabels = {{ category_chart_labels|tojson }};
+        const categoryValues = {{ category_chart_values|tojson }};
+
+        new Chart(document.getElementById('severityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: severityLabels,
+                datasets: [{
+                    data: severityValues,
+                    backgroundColor: ['#22c55e', '#fbbf24', '#fb7185', '#ef4444'],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                },
+            },
+        });
+
+        new Chart(document.getElementById('categoryChart'), {
+            type: 'bar',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    label: 'Messages',
+                    data: categoryValues,
+                    backgroundColor: '#38bdf8',
+                    borderRadius: 12,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                },
+            },
+        });
+    </script>
+</body>
+</html>

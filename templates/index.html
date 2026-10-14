@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberbullying Detection Studio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="page-shell landing-page">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Cyberbullying Detection Studio</p>
+                <h1>Detect harmful text, rank severity, and review the evidence.</h1>
+            </div>
+            <div class="topbar-actions">
+                <a class="secondary-link" href="{{ url_for('bulk_analysis') }}">Bulk analysis</a>
+                <a class="secondary-link" href="{{ url_for('dashboard') }}">Open dashboard</a>
+            </div>
+        </header>
+
+        <section class="stats-grid compact-grid">
+            {% for card in overview_cards %}
+                <article class="stat-card stat-card-landing">
+                    <span>{{ card.label }}</span>
+                    <strong>{{ card.value }}</strong>
+                </article>
+            {% endfor %}
+        </section>
+
+        <section class="hero-card glass-card">
+            <div class="hero-copy">
+                <p class="section-tag">Try a live analysis</p>
+                <p class="lead">Use the example prompts or paste your own message. The app will classify the category, assign a severity level, and explain what to do next.</p>
+
+                <div class="sample-grid">
+                    <button type="button" class="sample-chip" data-sample="Hey, are you coming to the meeting today?">Safe example</button>
+                    <button type="button" class="sample-chip" data-sample="That idea is not great and could be improved.">Low severity</button>
+                    <button type="button" class="sample-chip" data-sample="You are worthless and nobody wants you here.">High severity</button>
+                </div>
+            </div>
+
+            <div class="analysis-card">
+                <form action="{{ url_for('predict') }}" method="post" class="analysis-form" id="analysis-form">
+                    <div class="field-header">
+                        <label for="message">Message</label>
+                        <span id="char-count">0 characters</span>
+                    </div>
+                    <textarea id="message" name="message" rows="8" placeholder="Paste a message or post here..."></textarea>
+                    <div class="form-actions">
+                        <button type="submit" class="primary-button">Analyze message</button>
+                        <button type="reset" class="ghost-button">Clear</button>
+                    </div>
+                </form>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-stack">
+                            {% for category, message in messages %}
+                                <div class="flash {{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% if result %}
+                    <section class="result-panel result-panel-active">
+                        <div class="result-header">
+                            <div>
+                                <p class="section-tag">Latest prediction</p>
+                                <h2>Detection Result</h2>
+                            </div>
+                            <span class="severity-badge severity-{{ result.severity|lower }}">{{ result.severity }}</span>
+                        </div>
+
+                        <div class="result-grid result-grid-enhanced">
+                            <div>
+                                <span>Category</span>
+                                <strong>{{ result.predicted_category }}</strong>
+                            </div>
+                            <div>
+                                <span>Confidence</span>
+                                <strong>{{ result.confidence }}%</strong>
+                            </div>
+                        </div>
+
+                        <div class="confidence-meter" aria-hidden="true">
+                            <div class="confidence-fill" style="width: {{ result.confidence }}%;"></div>
+                        </div>
+
+                        <div class="suggestion-card">
+                            <span>Why it was flagged</span>
+                            <p>{{ result.explanation }}</p>
+                        </div>
+
+                        <div class="suggestion-card">
+                            <span>Suggestion</span>
+                            <p>{{ result.suggestion }}</p>
+                        </div>
+                    </section>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
