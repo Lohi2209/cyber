@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import logging
 import zipfile
 from pathlib import Path
 
@@ -31,6 +32,8 @@ from utils.severity import (
 app = Flask(__name__)
 app.secret_key = "cyberbullying-secret-key"
 METRICS_PATH = Path(__file__).resolve().parent / "models" / "performance_metrics.json"
+LOGGER = logging.getLogger(__name__)
+_ARTIFACTS = None
 
 
 def load_performance_metrics():
@@ -41,7 +44,10 @@ def load_performance_metrics():
 
 
 def predict_messages(messages):
-    model, tokenizer, labels, vectorizer, classifier, lstm_weight = load_artifacts()
+    global _ARTIFACTS
+    if _ARTIFACTS is None:
+        _ARTIFACTS = load_artifacts()
+    model, tokenizer, labels, vectorizer, classifier, lstm_weight = _ARTIFACTS
     cleaned_messages = [clean_text(message) for message in messages]
     if model is None:
         probabilities = classifier.predict_proba(vectorizer.transform(cleaned_messages))
@@ -203,6 +209,9 @@ def bulk_analysis():
                 flash(str(error), "error")
             except FileNotFoundError:
                 flash("Train the model first so the app can make predictions.", "error")
+            except Exception:
+                LOGGER.exception("Bulk analysis failed")
+                flash("Bulk analysis could not be completed. Check the file format and try a smaller batch.", "error")
     return render_template("bulk.html", results=results, summary=summary)
 
 
