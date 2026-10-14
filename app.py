@@ -35,6 +35,11 @@ METRICS_PATH = Path(__file__).resolve().parent / "models" / "performance_metrics
 LOGGER = logging.getLogger(__name__)
 _ARTIFACTS = None
 
+try:
+    _ARTIFACTS = load_artifacts()
+except FileNotFoundError:
+    LOGGER.warning("Model artifacts are not available yet; predictions will fail until training is complete.")
+
 
 def load_performance_metrics():
     if not METRICS_PATH.exists():
