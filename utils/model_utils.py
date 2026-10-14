@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import joblib
-from tensorflow.keras.models import load_model
 
 
 MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
@@ -60,6 +59,8 @@ def load_artifacts():
     required_paths = [MODEL_PATH, TOKENIZER_PATH, LABELS_PATH]
     if not all(path.exists() for path in required_paths):
         raise FileNotFoundError("LSTM model artifacts are missing. Run train_model.py first.")
+    from tensorflow.keras.models import load_model
+
     model = load_model(MODEL_PATH)
     tokenizer = joblib.load(TOKENIZER_PATH)
     labels = joblib.load(LABELS_PATH)
